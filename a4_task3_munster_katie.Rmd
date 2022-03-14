@@ -1,0 +1,135 @@
+---
+title: 'Assignment 4, Task 3: Text wrangling and analysis'
+author: "Katie Munster"
+date: "3/12/2022"
+output:
+  html_document:
+    code_folding: hide
+---
+
+## Overview
+
+This report explores "The State of the Planet" speech delivered in December 2020 at Columbia University. This speech is directed towards Lee Bollinger, President of Columbia University. Text wrangling, data visualization, and sentiment analysis techniques are used to analyze the speech.
+
+**Data citation:** "The State of the Planet." United Nations. 2020 (https://www.un.org/sites/un2.un.org/files/sgspeech-the-state-of-planet.pdf)
+
+## Data wrangling
+
+```{r setup, include=TRUE, message = FALSE, warning = FALSE, class.source = 'fold=show'}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(here)
+library(tidytext)
+library(textdata)
+library(pdftools)
+library(ggwordcloud)
+```
+
+```{r}
+# Read in the data
+state_of_planet_text <- pdf_text(here("data", "state-of-planet.pdf"))
+```
+
+```{r}
+# Create a data frame of text in each line
+state_of_planet_lines <- data.frame(state_of_planet_text) %>% 
+  mutate(page = 1:n()) %>% 
+  mutate(text_full = str_split(state_of_planet_text, pattern = '\\n')) %>% 
+  unnest(text_full) %>% 
+  mutate(text_full = str_trim(text_full)) %>% 
+  filter(text_full != "")
+```
+
+## Most frequently used words
+
+```{r}
+# Separate data by words
+state_of_planet_words <- state_of_planet_lines %>% 
+  unnest_tokens(word, text_full) %>% 
+  select(-state_of_planet_text)
+```
+
+```{r}
+# Get word counts
+state_of_planet_wordcount <- state_of_planet_words %>% 
+  count(word)
+```
+
+```{r}
+# Remove stop words
+state_of_planet_words_clean <- state_of_planet_words %>% 
+  anti_join(stop_words, by = 'word')
+
+nonstop_counts <- state_of_planet_words_clean %>% 
+  count(word)
+```
+
+```{r}
+# Find the top 10 words
+top_10_words <- nonstop_counts %>% 
+  arrange(-n) %>% 
+  slice(1:10)
+```
+
+```{r}
+# Visualize the top 10 words
+ggplot(data = top_10_words,
+       aes(x = n, y = word)) +
+  geom_col(fill = 'darkslategray4') +
+  labs(x = 'Count',
+       y = 'Word',
+       title = 'Top 10 most frequently used words in "The State of the Planet" speech')
+```
+
+**Figure 1.** This plot visualizes the top 10 most used words in "The State of the Planet" speech delivered in 2020 at Columbia University.
+
+```{r}
+# Create a word cloud
+state_of_planet_top100 <- nonstop_counts %>% 
+  arrange(-n) %>% 
+  slice(1:100)
+
+state_of_planet_cloud <- ggplot(data = state_of_planet_top100,
+                                aes(label = word)) +
+  geom_text_wordcloud(aes(color = n, size = n), shape = 'diamond') +
+  scale_size_area(max_size = 6) +
+  scale_color_gradientn(colors = c('darkgreen', 'darkblue', 'darkred')) +
+  theme_minimal()
+
+state_of_planet_cloud
+```
+
+**Figure 2.** This word cloud visualizes the 100 most used words in "The State of the Planet" speech delivered in 2020 at Columbia University. The larger text near the center of the cloud were the most frequently used throughout the speech.
+
+## Sentiment analysis
+
+```{r}
+# Get the NRC lexicon
+#get_sentiments(lexicon = 'nrc')
+```
+
+```{r}
+# Use NRC
+state_of_planet_nrc <- state_of_planet_words_clean %>% 
+  inner_join(get_sentiments('nrc'))
+```
+
+```{r}
+# Find the count of words by sentiment bin
+state_of_planet_nrc_counts <- state_of_planet_nrc %>% 
+  count(sentiment)
+```
+
+```{r}
+# Create a data visualization
+ggplot(data = state_of_planet_nrc_counts, 
+       aes(x = sentiment, y = n)) +
+  geom_col(fill = 'darkslategray4') +
+  coord_flip() +
+  labs(x = 'Sentiment',
+       y = 'Word count',
+       title = 'Sentiment analysis of "The State of the Planet" speech')
+```
+
+**Figure 3.** This plot visualizes the count of words related to each sentiment in "The State of the Planet" speech delivered in 2020 at Columbia University.

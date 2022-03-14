@@ -101,7 +101,7 @@ inland_oil_incident_counts_sf <- ca_oil_incidents_sf %>%
 ```{r}
 ggplot(data = inland_oil_incident_counts_sf) +
   geom_sf(aes(fill = n_records), color = 'white', size = 0.1) +
-  scale_fill_gradientn(colors = c('lightgrey', 'orange', 'red')) +
+  scale_fill_gradientn(colors = c('lightgrey', 'darkslategray3', 'darkslategrey')) +
   theme_minimal() +
   labs(fill = 'Number of inland oil spill incidents per county in 2008')
 ```
